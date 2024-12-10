@@ -1,0 +1,52 @@
+#! /bin/sh 
+
+#must be root
+
+SRCD="cd-root"
+DST="debian-inmem.iso"
+TMPD="./aaa"
+EFIMG="efiboot.img"
+GRBOT="boot/grub/iso9660_stage1_5"
+
+
+
+rm -f $EFIMG
+rm -f $SRCD"/"$EFIMG
+rm -f $DST
+[ -r ./EFI ] && rm -fr ./EFI
+mkdir -p ./EFI/boot
+mkdir -p $SRCD/EFI/debian
+if [ -r $SRCD/boot/grub/efi/initrd.deb64.a ]; then
+    cat $SRCD/boot/grub/efi/initrd.deb64.a > $SRCD/boot/grub/efi/initrd-inmem-deb64
+    cat $SRCD/boot/grub/efi/initrd.deb64.b >> $SRCD/boot/grub/efi/initrd-inmem-deb64
+    cat $SRCD/boot/grub/efi/initrd.deb64.c >> $SRCD/boot/grub/efi/initrd-inmem-deb64
+    mkdir -p $TMPD 
+    mv $SRCD/boot/grub/efi/initrd.deb64.* $TMPD
+fi
+cp $SRCD/EFI/boot/grubx64.efi ./EFI/boot/bootx64.efi
+cp $SRCD/boot/grub/grub.cfg $SRCD/EFI/debian/
+mkdosfs -F12 -n "EFI" -C $EFIMG 3072
+mcopy -s -i $EFIMG EFI ::
+mv $EFIMG $SRCD
+rm -fr ./EFI
+
+mkisofs -o $DST -b $GRBOT -allow-lowercase -ldots \
+-l -r -J -input-charset=koi8-r -c boot/boot.cat -no-emul-boot \
+-boot-load-size 4 -boot-info-table -eltorito-alt-boot -b $EFIMG -no-emul-boot $SRCD
+
+rm -fr $SRCD/EFI/debian
+
+rm -f $SRCD/$EFIMG
+
+if [ -r $TMPD ]; then
+    rm -fr $SRCD/boot/grub/efi/initrd-inmem-deb64
+    mv $TMPD/*.deb64.* $SRCD/boot/grub/efi/
+    rm -fr $TMPD
+fi
+
+
+
+
+
+
+
